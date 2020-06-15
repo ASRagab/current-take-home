@@ -90,3 +90,6 @@ cloudfunction/
 
 transactions.csv
 cloud_sql_proxy
+
+*.tfstate
+*.tfstate.backup

@@ -14,6 +14,23 @@ import UserRepository from '../repositories/userRepository'
 import TransactionRepository from '../repositories/transactionRepository'
 import { asyncHandler } from '../middleware'
 
+export const enum UserControllerErrorCodes {
+  OK = 0,
+  Unknown = -1,
+  BadCreateUserRequest = 100,
+  FailedCreateUserRequest = 101,
+  FailedBalanceRequest = 102,
+  BadUpdateNameRequest = 103,
+  BadUpdateEmailRequest = 104,
+  BadUpdatePasswordRequest = 105,
+  MissingStartOrEnd = 107,
+  BadGetTransactionsRequest = 108,
+  FailedGetTransactions = 109,
+  FailedGetByMerchant = 110,
+  SummaryNotFound = 111,
+  AuthorizationFailed = 112
+}
+
 export default class UserController implements Controller {
   public path = '/users'
 
@@ -55,10 +72,12 @@ export default class UserController implements Controller {
       .summarize(userId)
       .then(value =>
         isRight(value)
-          ? res.status(200).json({ code: 0, message: value.right })
-          : res.status(400).json({ code: 111, message: value.left })
+          ? res.status(200).json({ code: UserControllerErrorCodes.OK, message: value.right })
+          : res
+              .status(400)
+              .json({ code: UserControllerErrorCodes.SummaryNotFound, message: value.left })
       )
-      .catch(err => res.status(500).json({ code: -1, message: err }))
+      .catch(err => res.status(500).json({ code: UserControllerErrorCodes.Unknown, message: err }))
   }
 
   // Instructions seem to indicate that the transaction need not be saved,
@@ -74,10 +93,15 @@ export default class UserController implements Controller {
         .authorize(userId, txnRequest)
         .then(authorized =>
           isRight(authorized)
-            ? res.status(200).json({ code: 0, message: authorized.right })
-            : res.status(400).json({ code: 104, message: authorized.left })
+            ? res.status(200).json({ code: UserControllerErrorCodes.OK, message: authorized.right })
+            : res.status(400).json({
+                code: UserControllerErrorCodes.AuthorizationFailed,
+                message: authorized.left
+              })
         )
-        .catch(err => res.status(500).json({ code: -1, message: err }))
+        .catch(err =>
+          res.status(500).json({ code: UserControllerErrorCodes.Unknown, message: err })
+        )
     } else {
       res.status(400).json({
         code: 100,
@@ -93,10 +117,12 @@ export default class UserController implements Controller {
       .getByMerchant(userId, merchantId)
       .then(value =>
         isRight(value)
-          ? res.status(200).json({ code: 0, message: value.right })
-          : res.status(400).json({ code: 110, message: value.left })
+          ? res.status(200).json({ code: UserControllerErrorCodes.OK, message: value.right })
+          : res
+              .status(400)
+              .json({ code: UserControllerErrorCodes.FailedGetByMerchant, message: value.left })
       )
-      .catch(err => res.status(500).json({ code: -1, message: err }))
+      .catch(err => res.status(500).json({ code: UserControllerErrorCodes.Unknown, message: err }))
   }
 
   private getTransactions = async (req: Request, res: Response) => {
@@ -104,7 +130,9 @@ export default class UserController implements Controller {
     const { userId } = req.params
 
     if (!start || !end) {
-      res.status(400).json({ code: 107, message: `missing start or end` })
+      res
+        .status(400)
+        .json({ code: UserControllerErrorCodes.MissingStartOrEnd, message: `missing start or end` })
     } else {
       const validated = validatePeriod(start, end)
       if (isRight(validated)) {
@@ -113,12 +141,20 @@ export default class UserController implements Controller {
           .getByTime(userId, startDate, endDate)
           .then(value =>
             isRight(value)
-              ? res.status(200).json({ code: 0, message: value.right })
-              : res.status(400).json({ code: 108, messsage: value.left })
+              ? res.status(200).json({ code: UserControllerErrorCodes.OK, message: value.right })
+              : res.status(400).json({
+                  code: UserControllerErrorCodes.FailedGetTransactions,
+                  messsage: value.left
+                })
           )
-          .catch(err => res.status(500).json({ code: -1, message: err }))
+          .catch(err =>
+            res.status(500).json({ code: UserControllerErrorCodes.Unknown, message: err })
+          )
       } else {
-        res.status(400).json({ code: 109, message: validated.left })
+        res.status(400).json({
+          code: UserControllerErrorCodes.BadGetTransactionsRequest,
+          message: validated.left
+        })
       }
     }
   }
@@ -128,16 +164,24 @@ export default class UserController implements Controller {
     const { userId } = req.params
 
     if (!email) {
-      res.status(400).json({ code: 102, message: `no email address provided` })
+      res.status(400).json({
+        code: UserControllerErrorCodes.BadUpdateEmailRequest,
+        message: `no email address provided`
+      })
     } else {
       this.users
         .updateEmail(userId, email)
         .then(updated =>
           isRight(updated)
-            ? res.status(200).json({ code: 0, message: updated.right })
-            : res.status(400).json({ code: 104, message: updated.left })
+            ? res.status(200).json({ code: UserControllerErrorCodes.OK, message: updated.right })
+            : res.status(400).json({
+                code: UserControllerErrorCodes.BadUpdateEmailRequest,
+                message: updated.left
+              })
         )
-        .catch(err => res.status(500).json({ code: -1, message: err }))
+        .catch(err =>
+          res.status(500).json({ code: UserControllerErrorCodes.Unknown, message: err })
+        )
     }
   }
 
@@ -146,18 +190,24 @@ export default class UserController implements Controller {
     const { userId } = req.params
 
     if (!(firstName || lastName)) {
-      res
-        .status(400)
-        .json({ code: 103, message: `one of the firstName or lastName should be provided` })
+      res.status(400).json({
+        code: UserControllerErrorCodes.BadUpdateNameRequest,
+        message: `one of the firstName or lastName should be provided`
+      })
     } else {
       this.users
         .updateName(userId, firstName, lastName)
         .then(updated =>
           isRight(updated)
-            ? res.status(200).json({ code: 0, message: updated.right })
-            : res.status(400).json({ code: 103, message: updated.left })
+            ? res.status(200).json({ code: UserControllerErrorCodes.OK, message: updated.right })
+            : res.status(400).json({
+                code: UserControllerErrorCodes.BadUpdateNameRequest,
+                message: updated.left
+              })
         )
-        .catch(err => res.status(500).json({ code: -1, message: err }))
+        .catch(err =>
+          res.status(500).json({ code: UserControllerErrorCodes.Unknown, message: err })
+        )
     }
   }
 
@@ -166,16 +216,24 @@ export default class UserController implements Controller {
     const { userId } = req.params
 
     if (!password) {
-      res.status(400).json({ code: 104, message: `No password provided` })
+      res.status(400).json({
+        code: UserControllerErrorCodes.BadUpdatePasswordRequest,
+        message: `No password provided`
+      })
     } else {
       this.users
         .updatePassword(userId, password)
         .then(updated =>
           isRight(updated)
-            ? res.status(200).json({ code: 0, message: updated.right })
-            : res.status(400).json({ code: 102, message: updated.left })
+            ? res.status(200).json({ code: UserControllerErrorCodes.OK, message: updated.right })
+            : res.status(400).json({
+                code: UserControllerErrorCodes.FailedCreateUserRequest,
+                message: updated.left
+              })
         )
-        .catch(err => res.status(500).json({ code: -1, message: err }))
+        .catch(err =>
+          res.status(500).json({ code: UserControllerErrorCodes.Unknown, message: err })
+        )
     }
   }
 
@@ -186,10 +244,13 @@ export default class UserController implements Controller {
       .then(cache => {
         const hit = cache[userId]
         return hit
-          ? res.status(200).json({ code: 0, message: hit })
-          : res.status(400).json({ code: 102, message: `${userId} not found` })
+          ? res.status(200).json({ code: UserControllerErrorCodes.OK, message: hit })
+          : res.status(400).json({
+              code: UserControllerErrorCodes.FailedCreateUserRequest,
+              message: `${userId} not found`
+            })
       })
-      .catch(err => res.status(500).json({ code: -1, message: err }))
+      .catch(err => res.status(500).json({ code: UserControllerErrorCodes.Unknown, message: err }))
   }
 
   private createUser = async (req: Request, res: Response) => {
@@ -199,13 +260,18 @@ export default class UserController implements Controller {
         .create(email, firstName, lastName, password)
         .then(inserted =>
           isRight(inserted)
-            ? res.status(201).json({ code: 0, message: inserted.right })
-            : res.status(400).json({ code: 101, message: inserted.left })
+            ? res.status(201).json({ code: UserControllerErrorCodes.OK, message: inserted.right })
+            : res.status(400).json({
+                code: UserControllerErrorCodes.FailedCreateUserRequest,
+                message: inserted.left
+              })
         )
-        .catch(err => res.status(500).json({ code: -1, message: err }))
+        .catch(err =>
+          res.status(500).json({ code: UserControllerErrorCodes.Unknown, message: err })
+        )
     } else {
       res.status(400).send({
-        code: 100,
+        code: UserControllerErrorCodes.BadCreateUserRequest,
         message: `expected CreateUserRequest received ${JSON.stringify(req.body)}`
       })
     }

@@ -106,3 +106,4 @@ Body:
 - Postman Collection
 - DRY up error handling
 - Cleanup Queries / More Types
+- fewer magic strings/numbers

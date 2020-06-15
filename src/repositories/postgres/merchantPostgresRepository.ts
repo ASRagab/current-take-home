@@ -1,7 +1,7 @@
 import Knex from 'knex'
 import { Either, right, left } from 'fp-ts/lib/Either'
 import MerchantRepository from '../merchantRepository'
-import { LatLong, PlaceDetail } from '../../models'
+import { LatLong, PlaceDetail, MerchantDetailResponse } from '../../models'
 
 export default class MerchantPostgresRepository implements MerchantRepository {
   private readonly tableName: string
@@ -22,7 +22,7 @@ export default class MerchantPostgresRepository implements MerchantRepository {
   updateMerchant = async (
     merchantId: string,
     placeDetail: PlaceDetail
-  ): Promise<Either<string, string>> => {
+  ): Promise<Either<string, MerchantDetailResponse>> => {
     const update = await this.knex(this.tableName)
       .returning('merchant_id')
       .update<string[]>({
@@ -30,6 +30,8 @@ export default class MerchantPostgresRepository implements MerchantRepository {
       })
       .where({ merchantId })
 
-    return update.length > 0 ? right(update[0]) : left(`merchantId ${merchantId} not found`)
+    return update.length > 0
+      ? right({ merchantId: update[0], placeDetail })
+      : left(`merchantId ${merchantId} not found`)
   }
 }

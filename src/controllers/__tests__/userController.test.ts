@@ -125,7 +125,7 @@ describe('UserController', () => {
 
       request(app)
         .get(getTransactions)
-        .expect(400, { code: 109, message: `provided start is after provided end date` })
+        .expect(400, { code: 108, message: `provided start is after provided end date` })
         .end(done)
     })
 
@@ -306,7 +306,7 @@ describe('UserController', () => {
       request(app)
         .put(updateEmail)
         .send(body)
-        .expect(400, { code: 102, message: `no email address provided` })
+        .expect(400, { code: 104, message: `no email address provided` })
         .end(done)
     })
 
@@ -402,7 +402,7 @@ describe('UserController', () => {
       request(app)
         .put(updatePassword)
         .send(body)
-        .expect(400, { code: 104, message: `No password provided` })
+        .expect(400, { code: 105, message: `No password provided` })
         .end(done)
     })
 

@@ -69,3 +69,8 @@ export interface PlaceDetail {
   formattedAdress?: string
   placeId?: string
 }
+
+export interface MerchantDetailResponse {
+  merchantId: string
+  placeDetail: PlaceDetail
+}

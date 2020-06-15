@@ -7,6 +7,16 @@ import { asyncHandler } from '../middleware'
 import MerchantRepository from '../repositories/merchantRepository'
 import { PlaceDetail } from '../models'
 
+export const enum MerchantControllerErrorCodes {
+  OK = 0,
+  UnknownError = -1,
+  NoMerchantId = 201,
+  PlaceDetailSearchError = 202,
+  BadMerchantUpdateRequest = 203,
+  FailedMerchantUpdateRequest = 199,
+  UnexpectedError = 1
+}
+
 export default class MerchantController implements Controller {
   public path = '/merchants'
 
@@ -16,9 +26,13 @@ export default class MerchantController implements Controller {
 
   private places: Client
 
+  private readonly placeDetailFields: string[]
+
   constructor(public deps: Dependencies, private readonly apiKey: string) {
     this.merchants = deps.repositories.merchants
     this.places = deps.places
+
+    this.placeDetailFields = ['formatted_address', 'name', 'place_id']
 
     this.registerRoutes()
   }
@@ -27,7 +41,7 @@ export default class MerchantController implements Controller {
     this.router.put(`/merchants/:merchantId/update`, asyncHandler(this.updateMerchant))
   }
 
-  private getPlacesDetail = async (merchantId: string): Promise<Either<string, PlaceDetail>> => {
+  private getPlaceDetail = async (merchantId: string): Promise<Either<string, PlaceDetail>> => {
     try {
       const latLng = await this.merchants.getLatLong(merchantId)
 
@@ -41,13 +55,13 @@ export default class MerchantController implements Controller {
         params: {
           key: this.apiKey,
           input: name,
-          fields: ['formatted_address', 'name', 'place_id'],
+          fields: this.placeDetailFields,
           inputtype: PlaceInputType.textQuery,
           locationbias: `point:${latitude},${longitude}`
         }
       })
 
-      const maybeCandidate = data.data.candidates[0]
+      const maybeCandidate = data.data.candidates[0] // TODO: Better handling around retrieving/handling candidatees
 
       const detail: PlaceDetail = {
         placeId: maybeCandidate.place_id,
@@ -65,25 +79,40 @@ export default class MerchantController implements Controller {
     const { merchantId } = req.params
 
     if (!merchantId) {
-      res.status(400).json({ code: 201, message: `No merchantId provided` })
+      res.status(400).json({
+        code: MerchantControllerErrorCodes.NoMerchantId,
+        message: `No merchantId provided`
+      })
     } else {
       try {
-        const data = await this.getPlacesDetail(merchantId)
+        const data = await this.getPlaceDetail(merchantId)
 
         if (isLeft(data)) {
-          res.status(400).json({ code: 202, message: data.left })
+          res
+            .status(400)
+            .json({ code: MerchantControllerErrorCodes.PlaceDetailSearchError, message: data.left })
         } else {
           this.merchants
             .updateMerchant(merchantId, data.right)
             .then(updated =>
               isRight(updated)
-                ? res.status(200).json({ code: 0, message: updated.right })
-                : res.status(400).json({ code: 203, message: updated.left })
+                ? res
+                    .status(200)
+                    .json({ code: MerchantControllerErrorCodes.OK, message: updated.right })
+                : res.status(400).json({
+                    code: MerchantControllerErrorCodes.BadMerchantUpdateRequest,
+                    message: updated.left
+                  })
             )
-            .catch(err => res.status(500).json({ code: -1, message: err }))
+            .catch(err =>
+              res.status(500).json({
+                code: MerchantControllerErrorCodes.FailedMerchantUpdateRequest,
+                message: err
+              })
+            )
         }
       } catch (e) {
-        res.status(500).json({ code: 204, message: e })
+        res.status(500).json({ code: MerchantControllerErrorCodes.UnexpectedError, message: e })
       }
     }
   }
