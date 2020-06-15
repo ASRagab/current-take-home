@@ -1,0 +1,1 @@
+ALTER TABLE transactions ALTER COLUMN amount_in_cents TYPE INTEGER;

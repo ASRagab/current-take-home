@@ -1,0 +1,1 @@
+ALTER TABLE merchants DROP COLUMN place_detail JSONB;

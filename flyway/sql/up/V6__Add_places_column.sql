@@ -1,0 +1,1 @@
+ALTER TABLE merchants ADD COLUMN place_detail JSONB;
