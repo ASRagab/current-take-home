@@ -25,6 +25,8 @@ resource "google_cloud_run_service" "current" {
     }
 
     spec {
+      container_concurrency = 10
+      
       containers {
         image = var.digest
 

@@ -20,19 +20,20 @@ export default class UserPostgresRepository implements UserRepository {
       return left(`email: ${email} is not valid`)
     }
 
-    const check = await trx(this.tableName)
+    return trx(this.tableName)
       .where({ email })
       .select('email', 'user_id')
       .first()
+      .then(check => {
+        const idempotentChange = userId && check?.userId === userId && check?.email === email
 
-    const idempotentChange = userId && check?.userId === userId && check?.email === email
+        if (!idempotentChange && check?.email) {
+          const duplicate = `duplicate email ${email}`
+          return left(duplicate)
+        }
 
-    if (!idempotentChange && check?.email) {
-      const duplicate = `duplicate email ${email}`
-      return left(duplicate)
-    }
-
-    return right('is unique and valid')
+        return right('is unique and valid')
+      })
   }
 
   create = async (
@@ -42,54 +43,57 @@ export default class UserPostgresRepository implements UserRepository {
     password: string
   ): Promise<Either<string, string>> => {
     return this.knex.transaction(async trx => {
-      const checkEmail = await this.checkEmail(trx, email)
+      return this.checkEmail(trx, email).then(checkEmail => {
+        if (isLeft(checkEmail)) {
+          return checkEmail
+        }
 
-      if (isLeft(checkEmail)) {
-        return checkEmail
-      }
-
-      const result = await trx(this.tableName)
-        .returning('user_id')
-        .insert<string>({
-          email,
-          firstName,
-          lastName,
-          password
-        })
-
-      return right(result)
+        return trx(this.tableName)
+          .returning('user_id')
+          .insert<string>({
+            email,
+            firstName,
+            lastName,
+            password
+          })
+          .then(result => right(result))
+      })
     })
   }
 
   updateEmail = async (userId: string, email: string): Promise<Either<string, string>> => {
     return this.knex.transaction(async trx => {
-      const checkEmail = await this.checkEmail(trx, email, userId)
+      return this.checkEmail(trx, email, userId).then(checkEmail => {
+        if (isLeft(checkEmail)) {
+          return checkEmail
+        }
 
-      if (isLeft(checkEmail)) {
-        return checkEmail
-      }
-
-      const result = await trx(this.tableName)
-        .returning('user_id')
-        .update<string>({
-          email
-        })
-        .where({ userId })
-
-      return result.length > 0 ? right(result) : left(`userId: '${userId}' could not be found`)
+        return trx(this.tableName)
+          .returning('user_id')
+          .update<string>({
+            email
+          })
+          .where({ userId })
+          .then(result => {
+            return result.length > 0
+              ? right(result)
+              : left(`userId: '${userId}' could not be found`)
+          })
+      })
     })
   }
 
   updatePassword = async (userId: string, password: string): Promise<Either<string, string>> => {
     return this.knex.transaction(async trx => {
-      const result = await trx(this.tableName)
+      return trx(this.tableName)
         .returning('user_id')
         .update<string>({
           password
         })
         .where({ userId })
-
-      return result.length > 0 ? right(result) : left(`userId: '${userId}' could not be found`)
+        .then(result => {
+          return result.length > 0 ? right(result) : left(`userId: '${userId}' could not be found`)
+        })
     })
   }
 
