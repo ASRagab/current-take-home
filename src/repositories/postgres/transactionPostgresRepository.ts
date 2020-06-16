@@ -25,20 +25,15 @@ export default class TransactionPostgresRepository implements TransactionReposit
    * This loads the cache of user balances in memory, it _should_ be hydrated on repo instantiation
    */
   private hydrateCache = async (): Promise<BalanceCache> => {
-    try {
-      const res = await this.knex(this.tableName)
-        .select('user_id')
-        .groupBy('user_id')
-        .sum('amount_in_cents')
+    const res = await this.knex(this.tableName)
+      .select('user_id')
+      .groupBy('user_id')
+      .sum('amount_in_cents')
 
-      return res.reduce((acc, current) => {
-        acc[current.userId] = parseInt(current.sum, 10)
-        return acc
-      }, {})
-    } catch (e) {
-      console.error(e)
-      return {}
-    }
+    return res.reduce((acc, current) => {
+      acc[current.userId] = parseInt(current.sum, 10)
+      return acc
+    }, {})
   }
 
   /**
