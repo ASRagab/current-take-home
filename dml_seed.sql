@@ -14,3 +14,6 @@ SELECT u.user_id, m.merchant_id, s.amountincents, to_timestamp(s.createdat / 100
 FROM seed s
          INNER JOIN users u on s.email = u.email
          INNER JOIN merchants m on s.merchant = m.name AND s.latitude = m.latitude AND s.longitude = m.longitude;
+
+INSERT INTO user_roles(name, login, password)
+  VALUES('admin', 'admin@domain.com', crypt('updat3r', gen_salt('bf', 8)));

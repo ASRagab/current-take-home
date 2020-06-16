@@ -43,11 +43,12 @@ export default class App {
       .use(compression())
       .use(requestLogger())
       .use(
-        '/users/:userId/update',
+        '/users/:userId/update', // TODO: Not hardcode this
         basicAuth({
           unauthorizedResponse: getUnauthorizedResponse,
           authorizeAsync: true,
-          authorizer: (user, pass, cb) => this.auth.authorizer(user, pass, cb)
+          authorizer: (user, pass, cb) => this.auth.authorizer(user, pass, cb),
+          challenge: true
         })
       )
   }

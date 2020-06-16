@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express'
+import { IBasicAuthedRequest } from 'express-basic-auth'
 import { isRight } from 'fp-ts/lib/Either'
 import { isOfType, validatePeriod } from '../utils'
 import {
@@ -23,6 +24,7 @@ export const enum UserControllerErrorCodes {
   BadUpdateNameRequest = 103,
   BadUpdateEmailRequest = 104,
   BadUpdatePasswordRequest = 105,
+  UnAuthorizedRequest = 106,
   MissingStartOrEnd = 107,
   BadGetTransactionsRequest = 108,
   FailedGetTransactions = 109,
@@ -159,7 +161,7 @@ export default class UserController implements Controller {
     }
   }
 
-  private updateEmail = async (req: Request, res: Response) => {
+  private updateEmail = async (req: IBasicAuthedRequest, res: Response) => {
     const { email } = req.body as UpdateUserRequest
     const { userId } = req.params
 
@@ -185,7 +187,7 @@ export default class UserController implements Controller {
     }
   }
 
-  private updateName = async (req: Request, res: Response) => {
+  private updateName = async (req: IBasicAuthedRequest, res: Response) => {
     const { firstName, lastName } = req.body as UpdateUserRequest
     const { userId } = req.params
 
@@ -211,7 +213,7 @@ export default class UserController implements Controller {
     }
   }
 
-  private updatePassword = async (req: Request, res: Response) => {
+  private updatePassword = async (req: IBasicAuthedRequest, res: Response) => {
     const { password } = req.body as UpdateUserRequest
     const { userId } = req.params
 

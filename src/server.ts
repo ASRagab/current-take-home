@@ -27,7 +27,7 @@ const places = new Client({})
 
 const transactions = new TransactionPostgresRepository(knex, Tables.transaction)
 const users = new UserPostgresRepository(knex, Tables.user)
-const auth = new UserAuthPostgresRepository(knex, Tables.user)
+const auth = new UserAuthPostgresRepository(knex, Tables.userRoles)
 const merchants = new MerchantPostgresRepository(knex, Tables.merchant)
 
 const dependencies: Dependencies = {

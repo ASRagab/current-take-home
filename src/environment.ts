@@ -35,5 +35,6 @@ export interface Dependencies {
 export const enum Tables {
   transaction = 'transactions',
   user = 'users',
-  merchant = 'merchants'
+  merchant = 'merchants',
+  userRoles = 'user_roles'
 }

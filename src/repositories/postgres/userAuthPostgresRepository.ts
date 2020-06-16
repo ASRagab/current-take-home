@@ -9,18 +9,34 @@ export default class UserAuthPostgresRepository implements UserAuthRepository {
     this.tableName = table
   }
 
+  /**
+   * Checks the incoming password against the database using the email address (unique)
+   * password is checked against incoming password `?` in the databse, if a result comes back
+   * we've found a match
+   */
   private checkPassword = async (email: string, password: string): Promise<boolean> => {
-    const result = await this.knex(this.tableName)
-      .select('user_id')
-      .where('email', email)
-      .andWhereRaw(`password = crypt(?, password)`, [password])
+    try {
+      const query = await this.knex(this.tableName)
+        .select('id')
+        .where('login', email)
+        .andWhere('name', 'admin')
+        .andWhereRaw(`password = crypt(?, password)`, [password])
 
-    return result.length > 0
+      return query.length > 0
+    } catch (e) {
+      return false
+    }
   }
 
-  authorizer = (email: string, password: string, cb: AsyncAuthorizerCallback): Promise<void> => {
-    return this.checkPassword(email, password)
-      .then(authed => cb(null, authed))
-      .catch(err => cb(err, false))
+  /**
+   * basic auth middleware delegates to this call
+   */
+  authorizer = async (
+    email: string,
+    password: string,
+    cb: AsyncAuthorizerCallback // the express callback, old school null err channel on success
+  ): Promise<void> => {
+    return this.checkPassword(email, password).then(authed => cb(null, authed))
+    // .catch(err => cb(err, false))
   }
 }
