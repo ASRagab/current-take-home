@@ -45,3 +45,5 @@ flyway migrate \
   -placeholders.user_name=${db_user} \
   -placeholders.user_password=${db_pass} \
   -locations=filesystem:flyway/sql/up
+
+# flyway migrate -url=jdbc:postgresql://127.0.0.1:5432/current -user=current -password=current -locations=filesystem:flyway/sql/up

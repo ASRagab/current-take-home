@@ -2,3 +2,4 @@ DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS merchants;
 DROP TABLE IF EXISTS transactions;
 
+
